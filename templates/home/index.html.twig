@@ -1,0 +1,162 @@
+{% extends 'base.html.twig' %}
+
+
+{% block head %}
+    <link href='http://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
+    {% block title %}Time tracker{% endblock %}
+    {{ parent() }}
+{% endblock %}
+
+{% block body %}
+<style>
+    body {
+        background: #fbffee;
+        text-align: center;
+        font-family: 'Roboto', sans-serif;
+    }
+
+    input {
+        border-radius: 1rem;
+        width: 100%;
+    }
+
+    button {
+        border-radius: 1rem;
+        width: 49%;
+        color: rgb(var(--pure-material-onprimary-rgb, 255, 255, 255));
+        background-color: rgb(var(--pure-material-primary-rgb, 33, 150, 243));
+        box-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+        outline: none;
+        border: none;
+        padding: 0.4rem;
+    }
+
+    button::-moz-focus-inner {
+        border: none;
+    }
+
+    /* Overlay */
+    button::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: rgb(var(--pure-material-onprimary-rgb, 255, 255, 255));
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    #timer {
+        font-size: 1.6rem;
+    }
+
+    @media (min-width: 1080px) {
+        input {
+            width: initial;
+        }
+        button {
+            width: initial;
+        }
+    }
+</style>
+
+<div>
+    <h1>Tasks</h1>
+
+    <input id="taskName"/>
+    <div id="timer"></div>
+    <button id="start">start</button>
+    <button id="stop">stop</button>
+
+    <div>
+        Today tasks:
+        <ul id="tasks">
+        </ul>
+    </div>
+</div>
+
+<script>
+    currentRegistry = {};
+    h = 0;
+    m = 0;
+    s = 0;
+    window.onload = init;
+    function init() {
+        document.getElementById("timer").innerHTML="00:00:00";
+        document.getElementById("start").addEventListener("click", start);
+        document.getElementById("stop").addEventListener("click", stop);
+    }
+    function loop() {
+        id = setInterval(updateTimer, 1000);
+        document.getElementById("start").removeEventListener("click", start);
+    }
+    function stopLoop() {
+        clearInterval(id);
+        document.getElementById("start").addEventListener("click", start);
+    }
+    function updateTimer() {
+        var hAux, mAux, sAux;
+        s++;
+        if (s>59){m++;s=0;}
+        if (m>59){h++;m=0;}
+        if (h>24){h=0;}
+
+        if (s<10){sAux="0"+s;}else{sAux=s;}
+        if (m<10){mAux="0"+m;}else{mAux=m;}
+        if (h<10){hAux="0"+h;}else{hAux=h;}
+        document.getElementById("timer").innerHTML = hAux + ":" + mAux + ":" + sAux; 
+    }
+    function start() {
+        getData('start');
+        loop();
+        xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                callback(xhttp.responseText);
+            }
+        }
+        xhttp.open("POST", "/register");
+        xhttp.setRequestHeader("Content-type", "application/json");
+        xhttp.send(JSON.stringify({name: document.getElementById("taskName").value, startTime: Math.floor(Date.now() / 1000)}));
+    }
+    function stop() {
+        getData('stop');
+        stopLoop();
+        xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                callback(xhttp.responseText);
+            }
+        }
+        xhttp.open("POST", "/register");
+        xhttp.setRequestHeader("Content-type", "application/json");
+        xhttp.send(JSON.stringify(currentRegistry));
+    }
+    function getData(arg) {
+        currentRegistry.name = document.getElementById("taskName").value;
+        if (arg == 'start') {
+            currentRegistry.startTime = Math.floor(Date.now() / 1000);
+        } else {
+            currentRegistry.endTime = Math.floor(Date.now() / 1000);
+        }
+    }
+    function callback(response) {
+        response = JSON.parse(JSON.parse(response));
+        currentRegistry.id = response.id;
+        appendRegistry(response);
+    }
+    function appendRegistry(object) {
+        if (!response.totalTime) {
+            return;
+        }
+        var numb = object.totalTime/60;
+        numb = numb.toFixed(2);
+        let node = document.createElement("li");
+        let textnode = document.createTextNode(object.name + " " + numb + "min");
+        node.appendChild(textnode);
+        document.getElementById("tasks").appendChild(node);
+    }
+</script>
+{% endblock %}
